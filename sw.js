@@ -1,7 +1,6 @@
-const CACHE = 'mypeople-v1';
+const CACHE = 'mypeople-v2';
 const LOCAL_ASSETS = ['./index.html', './manifest.json', './icon.svg'];
 
-// On install: cache local files and skip waiting
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE).then(c => c.addAll(LOCAL_ASSETS))
@@ -10,7 +9,6 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
-  // Remove old caches
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
@@ -21,7 +19,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = e.request.url;
 
-  // CDN resources (Babel, esm.sh, lucide): cache then network
+  // CDN resources: cache first (they never change)
   if (url.includes('unpkg.com') || url.includes('esm.sh')) {
     e.respondWith(
       caches.open(CACHE).then(async cache => {
@@ -39,8 +37,15 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Local assets: cache first
+  // Local assets: network first, fall back to cache for offline
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
+    fetch(e.request)
+      .then(response => {
+        if (response.ok) {
+          caches.open(CACHE).then(c => c.put(e.request, response.clone()));
+        }
+        return response;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
