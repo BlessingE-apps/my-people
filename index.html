@@ -310,14 +310,6 @@ function HomeView({people,events,navigate,onEventClick}) {
   upcomingBdays.filter(x=>x.n<=14).forEach(x=>{
     actions.push({icon:'🎁',text:`Get a gift for ${x.p.name}`,sub:`Birthday ${duLabel(x.n)}`});
   });
-  const overdueList=people.filter(isOverdue);
-  if(overdueList.length>0){
-    const pick=overdueList[Math.floor(Date.now()/86400000)%overdueList.length];
-    const d=daysSince(pick.lastContactDate);
-    actions.push({icon:'💌',text:`Reach out to ${pick.name}`,
-      sub:d===null?'You haven\'t connected yet':`${d} days since your last check-in`,
-      person:pick});
-  }
 
   return (
     <div style={{paddingBottom:100}}>
