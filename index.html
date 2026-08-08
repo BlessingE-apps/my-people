@@ -679,7 +679,7 @@ function AddEditView({person,onSave,showToast}) {
             📷
           </div>
         </div>
-        <input ref={fileRef} type="file" accept="image/*" capture="environment"
+        <input ref={fileRef} type="file" accept="image/*"
           style={{display:'none'}} onChange={handlePhotoUpload}/>
         <button onClick={()=>setShowEmojiPicker(v=>!v)}
           style={{fontSize:12,color:C.textLight,marginTop:2}}>
