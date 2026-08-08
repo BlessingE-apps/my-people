@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#4A2E2A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="My People">
+  <title>My People</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #FFFBF7;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+    #root { height: 100%; }
+    .hs::-webkit-scrollbar { display: none; }
+    .hs { -ms-overflow-style: none; scrollbar-width: none; }
+    input, textarea { outline: none; font-family: inherit; font-size: 16px; }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; }
+    a { text-decoration: none; color: inherit; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ── Palette ──────────────────────────────────────────────────────────────────
+const C = {
+  primary:'#4A2E2A', accent1:'#D99C7C', accent2:'#F3C46F',
+  light:'#F5DDD5', bg:'#FFFBF7', card:'#FFF9F5', textLight:'#8B6F5C'
+};
+
+// ── Inline SVG Icons ─────────────────────────────────────────────────────────
+const Icon = ({d, size=24, color='currentColor', fill='none', strokeWidth=2, children}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color}
+       strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+    {d ? <path d={d}/> : children}
+  </svg>
+);
+const Heart  = ({size,color,fill}) => <Icon size={size} color={color} fill={fill||'none'}
+  d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>;
+const Phone  = ({size,color}) => <Icon size={size} color={color}
+  d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.37 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.57a16 16 0 0 0 5.52 5.52l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>;
+const Msg    = ({size,color}) => <Icon size={size} color={color}
+  d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>;
+const Cal    = ({size,color}) => <Icon size={size} color={color}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></Icon>;
+const Gift   = ({size,color}) => <Icon size={size} color={color}><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></Icon>;
+const Users  = ({size,color}) => <Icon size={size} color={color}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></Icon>;
+const Trend  = ({size,color}) => <Icon size={size} color={color}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></Icon>;
+const Mic    = ({size,color}) => <Icon size={size} color={color}><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></Icon>;
+const Plus   = ({size,color}) => <Icon size={size} color={color}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Icon>;
+const Chevron= ({size,color}) => <Icon size={size} color={color} d="M9 18l6-6-6-6"/>;
+const Back   = ({size,color}) => <Icon size={size} color={color} d="M19 12H5M12 19l-7-7 7-7"/>;
+const Edit   = ({size,color}) => <Icon size={size} color={color} d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>;
+const Trash  = ({size,color}) => <Icon size={size} color={color}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></Icon>;
+
+// ── Constants ────────────────────────────────────────────────────────────────
+const CATEGORIES    = ['Family','Friends','Professional Network'];
+const FREQUENCIES   = ['Weekly','Biweekly','Monthly','Seasonally'];
+const CONTACT_PREFS = ['Text','Call','Email','DM / Social'];
+const FREQ_DAYS     = {Weekly:7,Biweekly:14,Monthly:30,Seasonally:90};
+const EVENT_TYPES   = ['Coffee','Dinner','Movie Night','Happy Hour','Lunch','Walk'];
+const EVENT_ICONS   = {Coffee:'☕',Dinner:'🍽️','Movie Night':'🎬','Happy Hour':'🍹',Lunch:'🥗',Walk:'🚶🏾'};
+const PHOTO_EMOJIS  = ['👤','👴🏾','👵🏾','👨🏾','👩🏾','👨🏾‍💼','👩🏾‍💼','👨🏾‍🎓','👩🏾‍🎓','🧑🏾','👦🏾','👧🏾','👴','👵','👨','👩','🧑'];
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+const daysSince = (ds) => ds ? Math.floor((Date.now()-new Date(ds).getTime())/86400000) : null;
+const daysAgo   = (n)  => { const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString(); };
+const isOverdue = (p)  => { const d=daysSince(p.lastContactDate); return d===null||d>=(FREQ_DAYS[p.frequency]||30); };
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const nextBirthday = (str) => {
+  if(!str) return null;
+  const parts=str.trim().split(/\s+/);
+  if(parts.length<2) return null;
+  const mi=MONTHS.findIndex(m=>m.toLowerCase().startsWith(parts[0].toLowerCase()));
+  const day=parseInt(parts[1]);
+  if(mi===-1||isNaN(day)) return null;
+  const now=new Date(); now.setHours(0,0,0,0);
+  const d=new Date(now.getFullYear(),mi,day);
+  if(d<now) d.setFullYear(d.getFullYear()+1);
+  return d;
+};
+const daysFromNow = (date) => {
+  if(!date) return null;
+  const now=new Date(); now.setHours(0,0,0,0);
+  return Math.round((new Date(date)-now)/86400000);
+};
+const duLabel = (n) => {
+  if(n===0) return 'Today';
+  if(n===1) return 'Tomorrow';
+  if(n<=6){ const d=new Date(); d.setDate(d.getDate()+n); return d.toLocaleDateString('en-US',{weekday:'long'}); }
+  return `in ${n} days`;
+};
+const toDateInput = (iso) => iso ? new Date(iso).toISOString().split('T')[0] : '';
+const fromDateInput = (s) => s ? new Date(s+'T12:00:00').toISOString() : null;
+
+// Resize + compress an image File to a base64 JPEG (max 400px, ~60KB)
+const compressImage = (file) => new Promise(resolve => {
+  const img = new Image(), url = URL.createObjectURL(file);
+  img.onload = () => {
+    URL.revokeObjectURL(url);
+    const max=400, r=Math.min(max/img.width, max/img.height, 1);
+    const c=document.createElement('canvas');
+    c.width=Math.round(img.width*r); c.height=Math.round(img.height*r);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    resolve(c.toDataURL('image/jpeg',0.72));
+  };
+  img.src=url;
+});
+
+// ── Sample Data ──────────────────────────────────────────────────────────────
+const SAMPLE = [
+  {id:1,name:'Nana',category:'Family',photo:'👵🏾',photoData:null,relationship:'Grandmother',
+   birthday:'March 15',frequency:'Weekly',notes:'Loves gardening, calls every Sunday',
+   phone:'',email:'',contactPref:'Call',howWeMet:'Family',city:'',lastContactDate:daysAgo(10)},
+  {id:2,name:'Maya',category:'Friends',photo:'👩🏾',photoData:null,relationship:'Line Sister',
+   birthday:'July 22',frequency:'Biweekly',notes:'Working on her PhD, loves coffee',
+   phone:'',email:'',contactPref:'Text',howWeMet:'College',city:'Philadelphia',lastContactDate:daysAgo(3)},
+  {id:3,name:'Dr. Johnson',category:'Professional Network',photo:'👨🏾‍💼',photoData:null,relationship:'Mentor',
+   birthday:'November 8',frequency:'Monthly',notes:'Big presentation coming up, loves tea',
+   phone:'',email:'',contactPref:'Email',howWeMet:'Work introduction',city:'New York',lastContactDate:daysAgo(14)},
+  {id:4,name:'Jasmine',category:'Friends',photo:'👩🏾‍🦱',photoData:null,relationship:'Day 1',
+   birthday:'September 3',frequency:'Weekly',notes:'Just moved to new city, yoga enthusiast',
+   phone:'',email:'',contactPref:'Text',howWeMet:'Mutual friend',city:'Atlanta',lastContactDate:daysAgo(2)},
+];
+
+// ── Shared UI ────────────────────────────────────────────────────────────────
+const Field = ({label,children}) => (
+  <div>
+    <div style={{fontSize:12,color:C.textLight,marginBottom:6,fontWeight:500}}>{label}</div>
+    {children}
+  </div>
+);
+
+const iSx = {width:'100%',padding:'12px 14px',borderRadius:12,border:`1.5px solid ${C.light}`,background:C.card,color:C.primary,fontSize:16};
+
+const Pills = ({options,value,onChange,wrap=false}) => (
+  <div className={wrap?'':'hs'} style={{display:'flex',flexWrap:wrap?'wrap':'nowrap',gap:8,overflowX:wrap?undefined:'auto'}}>
+    {options.map(o=>(
+      <button key={o} onClick={()=>onChange(o)} style={{
+        padding:'8px 14px',borderRadius:20,fontSize:13,flexShrink:0,whiteSpace:'nowrap',
+        background:value===o?C.accent1:C.light,color:value===o?'white':C.primary,
+        fontWeight:value===o?600:400
+      }}>{o}</button>
+    ))}
+  </div>
+);
+
+// Renders a person's photo — real image if uploaded, emoji fallback otherwise
+const PersonPhoto = ({person, size, fontSize=36}) => (
+  <div style={{width:size,height:size,borderRadius:'50%',overflow:'hidden',flexShrink:0,
+    display:'flex',alignItems:'center',justifyContent:'center',
+    background:'linear-gradient(135deg,#D99C7C 0%,#F3C46F 100%)'}}>
+    {person.photoData
+      ? <img src={person.photoData} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+      : <span style={{fontSize}}>{person.photo}</span>}
+  </div>
+);
+
+const Toast = ({msg}) => (
+  <div style={{position:'fixed',bottom:90,left:'50%',transform:'translateX(-50%)',
+    background:C.primary,color:'white',padding:'10px 22px',borderRadius:24,
+    fontSize:14,zIndex:999,whiteSpace:'nowrap',boxShadow:'0 4px 16px rgba(0,0,0,.2)',pointerEvents:'none'}}>
+    {msg}
+  </div>
+);
+
+// ── ScheduleModal ────────────────────────────────────────────────────────────
+function ScheduleModal({person,onSave,onClose,existingEvent}) {
+  const isEdit=!!existingEvent;
+  const initType=existingEvent?(EVENT_TYPES.includes(existingEvent.type)?existingEvent.type:'custom'):'Coffee';
+  const initCustom=existingEvent&&!EVENT_TYPES.includes(existingEvent.type)?existingEvent.type:'';
+  const [type,setType]=useState(initType);
+  const [custom,setCustom]=useState(initCustom);
+  const [date,setDate]=useState(existingEvent?existingEvent.date:new Date().toISOString().split('T')[0]);
+  const [location,setLocation]=useState(existingEvent?existingEvent.location||'':'');
+  const isCustom=type==='custom';
+  const save=()=>{
+    if(!date) return;
+    const finalType=isCustom?(custom.trim()||'Hangout'):type;
+    if(isEdit) onSave({...existingEvent,type:finalType,date,location});
+    else onSave({id:Date.now(),personId:person.id,personName:person.name,type:finalType,date,location});
+    onClose();
+  };
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.45)',display:'flex',
+      alignItems:'flex-end',justifyContent:'center',zIndex:1000}}>
+      <div style={{background:'white',borderRadius:'24px 24px 0 0',padding:24,width:'100%',maxWidth:480,paddingBottom:40}}>
+        <h3 style={{fontFamily:'Georgia,serif',color:C.primary,marginBottom:4,fontSize:20}}>
+          {isEdit?'Edit Meetup':`Plan time with ${person.name}`}
+        </h3>
+        <p style={{color:C.textLight,fontSize:13,marginBottom:20}}>What are you planning?</p>
+        <div style={{marginBottom:20}}>
+          <div style={{fontSize:12,color:C.textLight,marginBottom:8,fontWeight:500}}>Type</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+            {EVENT_TYPES.map(t=>(
+              <button key={t} onClick={()=>setType(t)} style={{
+                padding:'8px 14px',borderRadius:20,fontSize:13,
+                background:type===t?C.accent1:C.light,
+                color:type===t?'white':C.primary,fontWeight:type===t?600:400}}>
+                {EVENT_ICONS[t]} {t}
+              </button>
+            ))}
+            <button onClick={()=>setType('custom')} style={{
+              padding:'8px 14px',borderRadius:20,fontSize:13,
+              background:isCustom?C.accent1:C.light,
+              color:isCustom?'white':C.primary,fontWeight:isCustom?600:400}}>
+              ✏️ Other
+            </button>
+          </div>
+          {isCustom&&(
+            <input value={custom} onChange={e=>setCustom(e.target.value)}
+              placeholder="e.g. Game night, Road trip, Brunch..."
+              style={{...iSx,marginTop:12}}/>
+          )}
+        </div>
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:12,color:C.textLight,marginBottom:8,fontWeight:500}}>Date</div>
+          <input type="date" value={date} min={new Date().toISOString().split('T')[0]}
+            onChange={e=>setDate(e.target.value)} style={iSx}/>
+        </div>
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:12,color:C.textLight,marginBottom:8,fontWeight:500}}>Location <span style={{fontWeight:400,opacity:.6}}>(optional)</span></div>
+          <input value={location} onChange={e=>setLocation(e.target.value)}
+            placeholder="e.g. Starbucks on Main St, Zoom, Their place…" style={iSx}/>
+        </div>
+        <div style={{display:'flex',gap:10}}>
+          <button onClick={onClose} style={{flex:1,padding:14,borderRadius:12,background:C.light,color:C.primary,fontSize:14}}>Cancel</button>
+          <button onClick={save} style={{flex:1,padding:14,borderRadius:12,
+            background:'linear-gradient(135deg,#D99C7C 0%,#F3C46F 100%)',color:'white',fontSize:14}}>{isEdit?'Save Changes':'Save'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── EventDetailModal ─────────────────────────────────────────────────────────
+function EventDetailModal({event,person,onUpdate,onDelete,onClose}) {
+  const [editing,setEditing]=useState(false);
+  const n=daysFromNow(event.date+'T12:00:00');
+  const dateStr=new Date(event.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  if(editing) return (
+    <ScheduleModal person={person} existingEvent={event}
+      onSave={e=>{onUpdate(e);onClose();}}
+      onClose={()=>setEditing(false)}/>
+  );
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.45)',display:'flex',
+      alignItems:'flex-end',justifyContent:'center',zIndex:1000}}>
+      <div style={{background:'white',borderRadius:'24px 24px 0 0',padding:28,width:'100%',maxWidth:480,paddingBottom:44}}>
+        <div style={{textAlign:'center',marginBottom:24}}>
+          <div style={{fontSize:52,marginBottom:10}}>{EVENT_ICONS[event.type]||'📅'}</div>
+          <h3 style={{fontFamily:'Georgia,serif',color:C.primary,fontSize:22,marginBottom:4}}>{event.type}</h3>
+          <p style={{color:C.textLight,fontSize:14,marginBottom:4}}>with {event.personName}</p>
+          <p style={{color:C.primary,fontSize:15,fontWeight:500,marginBottom:2}}>{dateStr}</p>
+          <p style={{color:C.accent1,fontSize:13,fontWeight:600,marginBottom:event.location?6:0}}>{duLabel(n)}</p>
+          {event.location&&<p style={{color:C.textLight,fontSize:13}}>📍 {event.location}</p>}
+        </div>
+        <div style={{display:'flex',gap:10,marginBottom:12}}>
+          <button onClick={()=>setEditing(true)} style={{flex:1,padding:14,borderRadius:12,
+            background:C.light,color:C.primary,fontSize:14,fontWeight:500}}>Edit</button>
+          <button onClick={()=>{onDelete(event.id);onClose();}} style={{flex:1,padding:14,borderRadius:12,
+            background:'#FEE2E2',color:'#DC2626',fontSize:14,fontWeight:500}}>Cancel Event</button>
+        </div>
+        <button onClick={onClose} style={{width:'100%',padding:14,borderRadius:12,
+          background:'transparent',color:C.textLight,fontSize:14}}>Close</button>
+      </div>
+    </div>
+  );
+}
+
+// ── HomeView ─────────────────────────────────────────────────────────────────
+function HomeView({people,events,navigate,onEventClick}) {
+  const overdue  = people.filter(isOverdue);
+  const weekCount= people.filter(p=>{ const d=daysSince(p.lastContactDate); return d!==null&&d<=7; }).length;
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // Birthdays in next 30 days
+  const upcomingBdays = people
+    .map(p=>({p,d:nextBirthday(p.birthday),n:daysFromNow(nextBirthday(p.birthday))}))
+    .filter(x=>x.n!==null&&x.n>=0&&x.n<=30)
+    .sort((a,b)=>a.n-b.n);
+
+  // Upcoming meetup events
+  const upcomingEvents = (events||[])
+    .filter(e=>e.date>=todayStr)
+    .map(e=>({...e,n:daysFromNow(e.date+'T12:00:00')}))
+    .sort((a,b)=>a.n-b.n)
+    .slice(0,8);
+
+  const allUpcoming = [
+    ...upcomingBdays.map(x=>({key:'b'+x.p.id,icon:'🎂',label:`${x.p.name}'s Birthday`,when:duLabel(x.n),n:x.n,accent:C.accent2})),
+    ...upcomingEvents.map(e=>({key:'e'+e.id,icon:EVENT_ICONS[e.type]||'📅',label:`${e.type} with ${e.personName}`,when:duLabel(e.n),n:e.n,accent:C.light,event:e}))
+  ].sort((a,b)=>a.n-b.n);
+
+  // Action items
+  const actions=[];
+  upcomingBdays.filter(x=>x.n<=14).forEach(x=>{
+    actions.push({icon:'🎁',text:`Get a gift for ${x.p.name}`,sub:`Birthday ${duLabel(x.n)}`});
+  });
+  const overdueList=people.filter(isOverdue);
+  if(overdueList.length>0){
+    const pick=overdueList[Math.floor(Date.now()/86400000)%overdueList.length];
+    const d=daysSince(pick.lastContactDate);
+    actions.push({icon:'💌',text:`Reach out to ${pick.name}`,
+      sub:d===null?'You haven\'t connected yet':`${d} days since your last check-in`,
+      person:pick});
+  }
+
+  return (
+    <div style={{paddingBottom:100}}>
+      <div style={{marginBottom:28}}>
+        <h1 style={{fontSize:28,fontFamily:'Georgia,serif',color:C.primary,marginBottom:4}}>Blessing,</h1>
+        <p style={{fontSize:16,color:C.textLight}}>here are the people on your heart today.</p>
+      </div>
+
+      {/* Bubbles */}
+      <div className="hs" style={{display:'flex',gap:16,overflowX:'auto',margin:'0 -24px 28px',padding:'4px 24px 12px'}}>
+        {people.map(p=>{
+          const d=daysSince(p.lastContactDate), over=isOverdue(p);
+          return (
+            <div key={p.id} onClick={()=>navigate('profile',p)} style={{flexShrink:0,textAlign:'center',cursor:'pointer'}}>
+              <div style={{marginBottom:6,boxShadow:'0 2px 10px rgba(0,0,0,.12)',borderRadius:'50%',
+                outline:over?`2.5px solid ${C.accent1}`:'none',outlineOffset:2}}>
+                <PersonPhoto person={p} size={72} fontSize={34}/>
+              </div>
+              <div style={{fontSize:12,fontWeight:600,color:C.primary,marginBottom:2}}>{p.name}</div>
+              <div style={{fontSize:11,color:over?C.accent1:C.textLight}}>
+                {d===null?'Never':d===0?'Today':`${d}d`}
+              </div>
+            </div>
+          );
+        })}
+        <div onClick={()=>navigate('add')} style={{flexShrink:0,textAlign:'center',cursor:'pointer'}}>
+          <div style={{width:72,height:72,borderRadius:'50%',display:'flex',alignItems:'center',
+            justifyContent:'center',border:`2px dashed ${C.accent1}`,background:C.card,marginBottom:6}}>
+            <Plus size={26} color={C.accent1}/>
+          </div>
+          <div style={{fontSize:11,color:C.textLight}}>Add</div>
+        </div>
+      </div>
+
+      {/* Upcoming dates */}
+      {allUpcoming.length>0&&(
+        <div style={{marginBottom:28}}>
+          <h2 style={{fontSize:20,fontFamily:'Georgia,serif',color:C.primary,marginBottom:14}}>Coming Up</h2>
+          <div className="hs" style={{display:'flex',gap:12,overflowX:'auto',margin:'0 -24px',padding:'4px 24px 8px'}}>
+            {allUpcoming.map(item=>(
+              <div key={item.key} onClick={item.event?()=>onEventClick(item.event):undefined}
+                style={{flexShrink:0,padding:'14px 16px',borderRadius:16,
+                background:item.accent,minWidth:140,maxWidth:160,
+                cursor:item.event?'pointer':'default'}}>
+                <div style={{fontSize:26,marginBottom:6}}>{item.icon}</div>
+                <div style={{fontWeight:600,color:C.primary,fontSize:13,lineHeight:1.3,marginBottom:4}}>{item.label}</div>
+                <div style={{fontSize:12,color:C.primary,opacity:.65}}>{item.when}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Action items */}
+      {actions.length>0&&(
+        <div style={{marginBottom:28}}>
+          <h2 style={{fontSize:20,fontFamily:'Georgia,serif',color:C.primary,marginBottom:14}}>To-Do List</h2>
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {actions.map((a,i)=>(
+              <div key={i} style={{padding:16,borderRadius:16,background:C.card,
+                display:'flex',alignItems:'center',gap:14,
+                ...(a.person?{cursor:'pointer'}:{})}
+              } onClick={a.person?()=>navigate('profile',a.person):undefined}>
+                <div style={{fontSize:28,flexShrink:0}}>{a.icon}</div>
+                <div>
+                  <div style={{fontWeight:600,color:C.primary,fontSize:14}}>{a.text}</div>
+                  <div style={{fontSize:12,color:C.textLight,marginTop:2}}>{a.sub}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Smart suggestions */}
+      {overdue.length>0 && (
+        <div style={{marginBottom:28}}>
+          <h2 style={{fontSize:20,fontFamily:'Georgia,serif',color:C.primary,marginBottom:14}}>Reach Out ✨</h2>
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            {overdue.slice(0,3).map((p,i)=>{
+              const d=daysSince(p.lastContactDate);
+              return (
+                <div key={p.id} style={{padding:16,borderRadius:16,background:C.card,
+                  borderLeft:`4px solid ${i%2===0?C.accent2:C.accent1}`}}>
+                  <p style={{color:C.primary,marginBottom:12,fontSize:14,lineHeight:1.5}}>
+                    {d===null?`You haven't connected with ${p.name} yet. Say hello?`
+                    :`It's been ${d} days since you checked in with ${p.name}.`}
+                  </p>
+                  <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                    {p.phone&&<a href={`tel:${p.phone}`} style={{padding:'7px 14px',borderRadius:20,fontSize:13,
+                      background:C.accent1,color:'white',display:'flex',alignItems:'center',gap:5}}>
+                      <Phone size={13} color="white"/> Call
+                    </a>}
+                    {p.phone&&<a href={`sms:${p.phone}`} style={{padding:'7px 14px',borderRadius:20,fontSize:13,
+                      background:C.accent2,color:C.primary,display:'flex',alignItems:'center',gap:5}}>
+                      <Msg size={13} color={C.primary}/> Text
+                    </a>}
+                    <button onClick={()=>navigate('profile',p)}
+                      style={{padding:'7px 14px',borderRadius:20,fontSize:13,background:C.light,color:C.primary}}>
+                      View Profile
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Health bar */}
+      <div style={{padding:24,borderRadius:20,background:'linear-gradient(135deg,#D99C7C 0%,#F3C46F 100%)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+          <Heart size={20} color="white" fill="white"/>
+          <h3 style={{fontSize:17,fontFamily:'Georgia,serif',color:'white',fontWeight:500}}>Relationship Health</h3>
+        </div>
+        <p style={{color:'white',fontSize:14,lineHeight:1.5}}>
+          {weekCount>0?`You've poured into ${weekCount} ${weekCount===1?'person':'people'} this week. Keep going 💛`
+            :'No connections logged this week yet. Who\'s on your heart today?'}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── ProfileView ──────────────────────────────────────────────────────────────
+function ProfileView({person,onEdit,onDelete,onLogConnection,onSchedule,onEventClick,events}) {
+  const [confirm,setConfirm]=useState(false);
+  const [scheduling,setScheduling]=useState(false);
+  const todayStr=new Date().toISOString().split('T')[0];
+  const personEvents=(events||[])
+    .filter(e=>e.personId===person.id&&e.date>=todayStr)
+    .map(e=>({...e,n:daysFromNow(e.date+'T12:00:00')}))
+    .sort((a,b)=>a.n-b.n);
+  const d=daysSince(person.lastContactDate);
+  const over=isOverdue(person);
+  return (
+    <div style={{paddingBottom:100}}>
+      <div style={{textAlign:'center',marginBottom:20}}>
+        <div style={{margin:'0 auto 14px',boxShadow:'0 4px 20px rgba(0,0,0,.12)',borderRadius:'50%',width:116,height:116}}>
+          <PersonPhoto person={person} size={116} fontSize={54}/>
+        </div>
+        <p style={{fontSize:15,color:C.textLight,marginBottom:4}}>
+          {[person.relationship,person.category].filter(Boolean).join(' · ')}
+        </p>
+        {(person.howWeMet||person.city)&&(
+          <p style={{fontSize:13,color:C.textLight}}>
+            {[person.howWeMet&&`Met via ${person.howWeMet}`, person.city&&`📍 ${person.city}`].filter(Boolean).join(' · ')}
+          </p>
+        )}
+      </div>
+
+      {/* Last contact */}
+      <div style={{padding:16,borderRadius:16,background:C.card,marginBottom:18,
+        display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+        <div>
+          <p style={{fontWeight:600,color:C.primary,marginBottom:3,fontSize:14}}>Last connection</p>
+          <p style={{color:over?C.accent1:C.textLight,fontSize:13}}>
+            {d===null?"You haven't connected yet":d===0?'Today 💛':d===1?'Yesterday':`${d} days ago`}
+          </p>
+        </div>
+        <button onClick={()=>onLogConnection(person)}
+          style={{padding:'10px 18px',borderRadius:12,fontSize:13,flexShrink:0,
+            background:C.accent1,color:'white',fontWeight:600}}>
+          Log ✓
+        </button>
+      </div>
+
+      {/* Actions */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:20}}>
+        {person.phone
+          ?<a href={`tel:${person.phone}`} style={{padding:16,borderRadius:16,background:C.accent1,color:'white',
+              display:'flex',flexDirection:'column',alignItems:'center',gap:6,fontSize:14}}>
+              <Phone size={22} color="white"/> Call
+            </a>
+          :<button onClick={()=>onEdit(person)} style={{padding:16,borderRadius:16,background:C.light,color:C.primary,
+              display:'flex',flexDirection:'column',alignItems:'center',gap:6,fontSize:14}}>
+              <Phone size={22} color={C.primary}/> Add Phone
+            </button>
+        }
+        {person.phone
+          ?<a href={`sms:${person.phone}`} style={{padding:16,borderRadius:16,background:C.accent2,color:C.primary,
+              display:'flex',flexDirection:'column',alignItems:'center',gap:6,fontSize:14}}>
+              <Msg size={22} color={C.primary}/> Text
+            </a>
+          :<div style={{padding:16,borderRadius:16,background:C.accent2,color:C.primary,opacity:.4,
+              display:'flex',flexDirection:'column',alignItems:'center',gap:6,fontSize:14}}>
+              <Msg size={22} color={C.primary}/> Text
+            </div>
+        }
+        <button style={{padding:16,borderRadius:16,background:C.light,color:C.primary,
+          display:'flex',flexDirection:'column',alignItems:'center',gap:6,fontSize:14}}>
+          <Mic size={22} color={C.primary}/> Voice Note
+        </button>
+        <button onClick={()=>setScheduling(true)} style={{padding:16,borderRadius:16,background:C.card,color:C.primary,
+          border:`1.5px solid ${C.accent1}`,
+          display:'flex',flexDirection:'column',alignItems:'center',gap:6,fontSize:14}}>
+          <Cal size={22} color={C.primary}/> Schedule
+        </button>
+      </div>
+
+      {/* Upcoming meetups */}
+      {personEvents.length>0&&(
+        <div style={{marginBottom:20}}>
+          <h3 style={{fontSize:17,fontFamily:'Georgia,serif',color:C.primary,marginBottom:10}}>Upcoming</h3>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {personEvents.map(e=>(
+              <div key={e.id} onClick={()=>onEventClick(e)}
+                style={{padding:'12px 16px',borderRadius:12,background:C.card,
+                display:'flex',alignItems:'center',gap:12,justifyContent:'space-between',cursor:'pointer'}}>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <span style={{fontSize:22}}>{EVENT_ICONS[e.type]||'📅'}</span>
+                  <div>
+                    <div style={{fontWeight:600,color:C.primary,fontSize:14}}>{e.type}</div>
+                    <div style={{fontSize:12,color:C.textLight}}>{new Date(e.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+                  </div>
+                </div>
+                <div style={{fontSize:13,color:C.accent1,fontWeight:500}}>{duLabel(e.n)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Details */}
+      <h3 style={{fontSize:17,fontFamily:'Georgia,serif',color:C.primary,marginBottom:12}}>About {person.name}</h3>
+      <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:24}}>
+        {person.birthday&&<div style={{padding:14,borderRadius:12,background:C.card}}>
+          <div style={{fontSize:11,color:C.textLight,marginBottom:2}}>Birthday</div>
+          <div style={{color:C.primary,fontSize:15}}>🎂 {person.birthday}</div>
+        </div>}
+        {person.email&&<div style={{padding:14,borderRadius:12,background:C.card}}>
+          <div style={{fontSize:11,color:C.textLight,marginBottom:2}}>Email</div>
+          <a href={`mailto:${person.email}`} style={{color:C.accent1,fontSize:15}}>✉️ {person.email}</a>
+        </div>}
+        {person.contactPref&&<div style={{padding:14,borderRadius:12,background:C.card}}>
+          <div style={{fontSize:11,color:C.textLight,marginBottom:2}}>Prefers to be reached by</div>
+          <div style={{color:C.primary,fontSize:15}}>💬 {person.contactPref}</div>
+        </div>}
+        <div style={{padding:14,borderRadius:12,background:C.card}}>
+          <div style={{fontSize:11,color:C.textLight,marginBottom:2}}>Check-in Frequency</div>
+          <div style={{color:C.primary,fontSize:15}}>🔁 {person.frequency}</div>
+        </div>
+        {person.notes&&<div style={{padding:14,borderRadius:12,background:C.card}}>
+          <div style={{fontSize:11,color:C.textLight,marginBottom:2}}>Notes</div>
+          <div style={{color:C.primary,fontSize:15,lineHeight:1.5}}>{person.notes}</div>
+        </div>}
+      </div>
+
+      <div style={{display:'flex',gap:10}}>
+        <button onClick={()=>onEdit(person)} style={{flex:1,padding:13,borderRadius:14,background:C.light,
+          color:C.primary,display:'flex',alignItems:'center',justifyContent:'center',gap:6,fontSize:14}}>
+          <Edit size={15} color={C.primary}/> Edit Profile
+        </button>
+        <button onClick={()=>setConfirm(true)} style={{padding:'13px 20px',borderRadius:14,
+          background:'#FEE2E2',color:'#DC2626',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <Trash size={18} color="#DC2626"/>
+        </button>
+      </div>
+
+      {confirm&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.45)',display:'flex',
+          alignItems:'center',justifyContent:'center',zIndex:1000,padding:24}}>
+          <div style={{background:'white',borderRadius:20,padding:24,maxWidth:320,width:'100%'}}>
+            <h3 style={{fontFamily:'Georgia,serif',color:C.primary,marginBottom:8,fontSize:20}}>
+              Remove {person.name}?
+            </h3>
+            <p style={{color:C.textLight,marginBottom:22,fontSize:14,lineHeight:1.5}}>
+              This will remove them from your people and can't be undone.
+            </p>
+            <div style={{display:'flex',gap:10}}>
+              <button onClick={()=>setConfirm(false)}
+                style={{flex:1,padding:14,borderRadius:12,background:C.light,color:C.primary,fontSize:14}}>Keep</button>
+              <button onClick={()=>onDelete(person.id)}
+                style={{flex:1,padding:14,borderRadius:12,background:'#DC2626',color:'white',fontSize:14}}>Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {scheduling&&<ScheduleModal person={person} onSave={e=>{onSchedule(e);setScheduling(false);}} onClose={()=>setScheduling(false)}/>}
+    </div>
+  );
+}
+
+// ── AddEditView ───────────────────────────────────────────────────────────────
+function AddEditView({person,onSave,showToast}) {
+  const blank = {
+    name:'',relationship:'',category:'Friends',photo:'👤',photoData:null,
+    birthday:'',frequency:'Monthly',notes:'',phone:'',email:'',
+    contactPref:'Text',howWeMet:'',city:'',lastContactDate:null
+  };
+  const [form,setForm]=useState(person?{...blank,...person}:blank);
+  const [showEmojiPicker,setShowEmojiPicker]=useState(false);
+  const [err,setErr]=useState('');
+  const fileRef=React.useRef();
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+
+  const handlePhotoUpload=async(e)=>{
+    const file=e.target.files[0]; if(!file) return;
+    const data=await compressImage(file);
+    setForm(f=>({...f,photoData:data}));
+  };
+
+  const importFromContacts=async()=>{
+    if(!('contacts' in navigator&&'ContactsManager' in window)){
+      showToast('Only available on iPhone/Android — install as an app first');
+      return;
+    }
+    try{
+      const props=['name','tel','email','address'];
+      const supported=await navigator.contacts.getProperties();
+      const pick=props.filter(p=>supported.includes(p));
+      const results=await navigator.contacts.select(pick,{multiple:false});
+      if(!results||results.length===0) return;
+      const c=results[0];
+      const name=(c.name&&c.name[0])||'';
+      const phone=(c.tel&&c.tel[0])||'';
+      const email=(c.email&&c.email[0])||'';
+      const city=(c.address&&c.address[0]&&(c.address[0].city||c.address[0].region))||'';
+      setForm(f=>({...f,
+        name:name||f.name,
+        phone:phone||f.phone,
+        email:email||f.email,
+        city:city||f.city,
+      }));
+      showToast('Contact imported 💛');
+    }catch(e){
+      if(e.name!=='AbortError') showToast('Could not access contacts');
+    }
+  };
+
+  const save=()=>{
+    if(!form.name.trim()){setErr('Name is required');return;}
+    setErr(''); onSave(form);
+  };
+
+  return (
+    <div style={{paddingBottom:120}}>
+      {/* Import from Contacts */}
+      <button onClick={importFromContacts} style={{
+        width:'100%',padding:'12px 16px',borderRadius:14,marginBottom:20,
+        background:C.card,border:`1.5px solid ${C.accent1}`,
+        color:C.primary,fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+        Import from Contacts
+      </button>
+
+      {/* Photo upload */}
+      <div style={{textAlign:'center',marginBottom:24}}>
+        <div style={{position:'relative',width:100,margin:'0 auto 10px'}}>
+          <div style={{width:100,height:100,borderRadius:'50%',overflow:'hidden',
+            boxShadow:'0 3px 12px rgba(0,0,0,.15)',cursor:'pointer'}}
+            onClick={()=>fileRef.current.click()}>
+            <PersonPhoto person={form} size={100} fontSize={48}/>
+          </div>
+          {/* Camera badge */}
+          <div onClick={()=>fileRef.current.click()} style={{
+            position:'absolute',bottom:2,right:2,width:28,height:28,borderRadius:'50%',
+            background:C.accent1,display:'flex',alignItems:'center',justifyContent:'center',
+            cursor:'pointer',boxShadow:'0 1px 4px rgba(0,0,0,.2)',fontSize:14}}>
+            📷
+          </div>
+        </div>
+        <input ref={fileRef} type="file" accept="image/*" capture="environment"
+          style={{display:'none'}} onChange={handlePhotoUpload}/>
+        <button onClick={()=>setShowEmojiPicker(v=>!v)}
+          style={{fontSize:12,color:C.textLight,marginTop:2}}>
+          or choose an avatar emoji ↓
+        </button>
+      </div>
+
+      {showEmojiPicker&&(
+        <div style={{display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center',
+          padding:16,background:C.card,borderRadius:16,marginBottom:20}}>
+          {PHOTO_EMOJIS.map(e=>(
+            <button key={e} onClick={()=>{set('photo',e);set('photoData',null);setShowEmojiPicker(false);}}
+              style={{fontSize:28,padding:6,borderRadius:10,
+                background:!form.photoData&&form.photo===e?C.accent1:'transparent'}}>
+              {e}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div style={{display:'flex',flexDirection:'column',gap:20}}>
+        <Field label="Name *">
+          <input value={form.name} onChange={e=>{set('name',e.target.value);setErr('');}}
+            placeholder="Their name" style={iSx}/>
+          {err&&<p style={{color:'#DC2626',fontSize:12,marginTop:4}}>{err}</p>}
+        </Field>
+
+        <Field label="Relationship">
+          <input value={form.relationship} onChange={e=>set('relationship',e.target.value)}
+            placeholder="e.g. Best friend, Mentor, Grandmother" style={iSx}/>
+        </Field>
+
+        <Field label="How we met">
+          <input value={form.howWeMet} onChange={e=>set('howWeMet',e.target.value)}
+            placeholder="e.g. College, Work, Mutual friend, Church" style={iSx}/>
+        </Field>
+
+        <Field label="Circle">
+          <Pills options={CATEGORIES} value={form.category} onChange={v=>set('category',v)}/>
+        </Field>
+
+        <Field label="Preferred way to reach them">
+          <Pills options={CONTACT_PREFS} value={form.contactPref} onChange={v=>set('contactPref',v)}/>
+        </Field>
+
+        <Field label="Phone">
+          <input value={form.phone} onChange={e=>set('phone',e.target.value)}
+            placeholder="+1 (555) 000-0000" type="tel" style={iSx}/>
+        </Field>
+
+        <Field label="Email">
+          <input value={form.email} onChange={e=>set('email',e.target.value)}
+            placeholder="their@email.com" type="email" style={iSx}/>
+        </Field>
+
+        <Field label="City / Location">
+          <input value={form.city||''} onChange={e=>set('city',e.target.value)}
+            placeholder="e.g. Atlanta, New York, London" style={iSx}/>
+        </Field>
+
+        <Field label="Birthday">
+          <input value={form.birthday} onChange={e=>set('birthday',e.target.value)}
+            placeholder="e.g. March 15" style={iSx}/>
+        </Field>
+
+        <Field label="Since we last connected">
+          <input type="date" max={new Date().toISOString().split('T')[0]}
+            value={toDateInput(form.lastContactDate)}
+            onChange={e=>set('lastContactDate',fromDateInput(e.target.value))}
+            style={iSx}/>
+        </Field>
+
+        <Field label="Check-in Frequency">
+          <Pills options={FREQUENCIES} value={form.frequency} onChange={v=>set('frequency',v)}/>
+        </Field>
+
+        <Field label="Notes">
+          <textarea value={form.notes} onChange={e=>set('notes',e.target.value)}
+            placeholder="Things to remember, upcoming events, what they love..."
+            rows={3} style={{...iSx,resize:'none',lineHeight:1.5}}/>
+        </Field>
+      </div>
+
+      <button onClick={save} style={{
+        width:'100%',padding:16,borderRadius:16,marginTop:28,
+        background:'linear-gradient(135deg,#D99C7C 0%,#F3C46F 100%)',
+        color:'white',fontSize:16,fontFamily:'Georgia,serif',
+        boxShadow:'0 4px 14px rgba(217,156,124,.4)'}}>
+        {person?'Save Changes 💛':'Add to My People 💛'}
+      </button>
+    </div>
+  );
+}
+
+// ── GesturesView ──────────────────────────────────────────────────────────────
+function GesturesView({showToast}) {
+  const items=[
+    {title:'Morning Affirmation',icon:'🌅',color:C.accent2,text:'"You are a whole person, not just what you produce today."'},
+    {title:'Check-In Script',icon:'💬',color:C.accent1,text:'"Hey, just thinking of you. How are you really doing?"'},
+    {title:'Gift Ideas',icon:'🎁',color:C.light,text:'Candles, journals, their fav snacks, experiences together.'},
+    {title:'Encouragement',icon:'💛',color:C.accent2,text:'"I believe in you more than you know."'},
+    {title:'Voice Note Starter',icon:'🎤',color:C.accent1,text:'"I just heard this and immediately thought of you..."'},
+    {title:'Celebration',icon:'🎉',color:C.light,text:'"You deserve every good thing coming your way!"'},
+    {title:'Soror Love',icon:'💚',color:C.accent2,text:'"Forever grateful you walked into my life."'},
+    {title:'Prayer & Peace',icon:'🙏🏾',color:C.accent1,text:'"Sending you peace, rest, and grace today."'},
+  ];
+  const copy=t=>{if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>showToast('Copied! 📋'));};
+  return (
+    <div style={{paddingBottom:100}}>
+      <p style={{color:C.textLight,marginBottom:20,fontSize:14}}>Tap any card to copy the message.</p>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+        {items.map((g,i)=>(
+          <div key={i} onClick={()=>copy(g.text)}
+            style={{padding:18,borderRadius:20,background:g.color,cursor:'pointer'}}>
+            <div style={{fontSize:34,marginBottom:8}}>{g.icon}</div>
+            <div style={{fontWeight:600,color:C.primary,fontSize:13,marginBottom:6}}>{g.title}</div>
+            <div style={{fontSize:12,color:C.primary,opacity:.75,fontStyle:'italic',lineHeight:1.4}}>{g.text}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{marginTop:20,padding:22,borderRadius:20,background:C.card}}>
+        <p style={{fontStyle:'italic',color:C.primary,lineHeight:1.7,fontSize:15}}>
+          "I know the world asks you to be strong; I hope you're letting yourself breathe today 💛"
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── CategoriesView ────────────────────────────────────────────────────────────
+function CategoriesView({people,navigate}) {
+  const colors=[C.accent1,C.accent2,C.light,C.accent1,C.accent2];
+  const cats=CATEGORIES.filter(c=>people.some(p=>p.category===c));
+  return (
+    <div style={{paddingBottom:100}}>
+      <div style={{display:'flex',flexDirection:'column',gap:14}}>
+        {cats.map((cat,i)=>{
+          const cp=people.filter(p=>p.category===cat);
+          const rec=cp.filter(p=>{const d=daysSince(p.lastContactDate);return d!==null&&d<=30;}).length;
+          return (
+            <div key={cat} onClick={()=>navigate('cat',null,cat)}
+              style={{padding:20,borderRadius:20,background:colors[i%colors.length],cursor:'pointer',
+                display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div>
+                <h3 style={{fontSize:20,fontFamily:'Georgia,serif',color:C.primary,marginBottom:4}}>{cat}</h3>
+                <p style={{fontSize:13,color:C.primary,opacity:.7}}>
+                  {cp.length} {cp.length===1?'person':'people'} · {rec} this month
+                </p>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:4}}>
+                {cp.slice(0,3).map(p=><PersonPhoto key={p.id} person={p} size={32} fontSize={18}/>)}
+                <Chevron color={C.primary} size={18}/>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── CategoryDetailView ────────────────────────────────────────────────────────
+function CategoryDetailView({category,people,navigate}) {
+  const cp=people.filter(p=>p.category===category);
+  return (
+    <div style={{paddingBottom:100}}>
+      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+        {cp.map(p=>{
+          const d=daysSince(p.lastContactDate),over=isOverdue(p);
+          return (
+            <div key={p.id} onClick={()=>navigate('profile',p)}
+              style={{padding:16,borderRadius:16,background:C.card,
+                display:'flex',alignItems:'center',gap:14,cursor:'pointer'}}>
+              <PersonPhoto person={p} size={52} fontSize={26}/>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:600,color:C.primary,marginBottom:2,fontSize:15}}>{p.name}</div>
+                <div style={{fontSize:13,color:C.textLight}}>{p.relationship}</div>
+              </div>
+              <div style={{textAlign:'right'}}>
+                <div style={{fontSize:12,color:over?C.accent1:C.textLight,fontWeight:over?600:400}}>
+                  {d===null?'Never':d===0?'Today':`${d}d ago`}
+                </div>
+                <div style={{fontSize:11,color:C.textLight}}>{p.frequency}</div>
+              </div>
+            </div>
+          );
+        })}
+        <div onClick={()=>navigate('add')} style={{padding:16,borderRadius:16,
+          border:`2px dashed ${C.accent1}`,display:'flex',alignItems:'center',
+          justifyContent:'center',gap:8,cursor:'pointer',color:C.accent1,fontSize:14}}>
+          <Plus size={18} color={C.accent1}/> Add someone to {category}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── AnalyticsView ─────────────────────────────────────────────────────────────
+function AnalyticsView({people}) {
+  const wk =people.filter(p=>{const d=daysSince(p.lastContactDate);return d!==null&&d<=7;}).length;
+  const mo =people.filter(p=>{const d=daysSince(p.lastContactDate);return d!==null&&d<=30;}).length;
+  const ov =people.filter(isOverdue).length;
+  const recent=[...people].filter(p=>p.lastContactDate)
+    .sort((a,b)=>new Date(b.lastContactDate)-new Date(a.lastContactDate)).slice(0,4);
+  const cats=CATEGORIES.filter(c=>people.some(p=>p.category===c));
+
+  return (
+    <div style={{paddingBottom:100}}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:18}}>
+        <div style={{padding:20,borderRadius:16,background:'linear-gradient(135deg,#D99C7C 0%,#F3C46F 100%)'}}>
+          <div style={{fontSize:34,fontWeight:700,color:'white'}}>{wk}</div>
+          <div style={{fontSize:13,color:'white',opacity:.9}}>this week</div>
+        </div>
+        <div style={{padding:20,borderRadius:16,background:C.card}}>
+          <div style={{fontSize:34,fontWeight:700,color:C.primary}}>{mo}</div>
+          <div style={{fontSize:13,color:C.textLight}}>this month</div>
+        </div>
+        <div style={{padding:20,borderRadius:16,background:C.card}}>
+          <div style={{fontSize:34,fontWeight:700,color:C.primary}}>{people.length}</div>
+          <div style={{fontSize:13,color:C.textLight}}>in your circle</div>
+        </div>
+        <div style={{padding:20,borderRadius:16,background:ov>0?'#FEF3C7':C.card}}>
+          <div style={{fontSize:34,fontWeight:700,color:ov>0?'#D97706':C.primary}}>{ov}</div>
+          <div style={{fontSize:13,color:C.textLight}}>need a check-in</div>
+        </div>
+      </div>
+
+      {recent.length>0&&(
+        <div style={{padding:20,borderRadius:16,background:C.card,marginBottom:14}}>
+          <h3 style={{fontSize:17,fontFamily:'Georgia,serif',color:C.primary,marginBottom:14}}>Recently Connected</h3>
+          {recent.map(p=>{
+            const d=daysSince(p.lastContactDate);
+            return (
+              <div key={p.id} style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
+                <span style={{fontSize:26}}>{p.photo}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:600,color:C.primary,fontSize:14}}>{p.name}</div>
+                  <div style={{fontSize:12,color:C.textLight}}>{p.category}</div>
+                </div>
+                <div style={{fontSize:13,color:C.accent1,fontWeight:500}}>
+                  {d===0?'Today':d===1?'Yesterday':`${d}d ago`}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{padding:20,borderRadius:16,background:C.card}}>
+        <h3 style={{fontSize:17,fontFamily:'Georgia,serif',color:C.primary,marginBottom:14}}>By Circle</h3>
+        {cats.map(cat=>{
+          const count=people.filter(p=>p.category===cat).length;
+          const pct=people.length>0?Math.round((count/people.length)*100):0;
+          return (
+            <div key={cat} style={{marginBottom:14}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:5}}>
+                <span style={{fontSize:14,color:C.primary}}>{cat}</span>
+                <span style={{fontSize:14,color:C.textLight}}>{count}</span>
+              </div>
+              <div style={{height:6,borderRadius:4,background:C.light,overflow:'hidden'}}>
+                <div style={{height:'100%',width:`${pct}%`,borderRadius:4,
+                  background:'linear-gradient(90deg,#D99C7C,#F3C46F)'}}/>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+function App() {
+  const [people,setPeople]=useState([]);
+  const [events,setEvents]=useState([]);
+  const [selectedEvent,setSelectedEvent]=useState(null);
+  const [view,setView]=useState('home');
+  const [selPerson,setSelPerson]=useState(null);
+  const [catFilter,setCatFilter]=useState(null);
+  const [editPerson,setEditPerson]=useState(null);
+  const [toast,setToast]=useState(null);
+  const [ready,setReady]=useState(false);
+
+  useEffect(()=>{
+    try{ const s=localStorage.getItem('mypeople_v1'); setPeople(s?JSON.parse(s):SAMPLE); }
+    catch{ setPeople(SAMPLE); }
+    try{ const e=localStorage.getItem('mypeople_events'); if(e) setEvents(JSON.parse(e)); }
+    catch{}
+    setReady(true);
+  },[]);
+
+  useEffect(()=>{ if(ready) localStorage.setItem('mypeople_v1',JSON.stringify(people)); },[people,ready]);
+  useEffect(()=>{ if(ready) localStorage.setItem('mypeople_events',JSON.stringify(events)); },[events,ready]);
+
+  const addEvent=ev=>{ setEvents(prev=>[...prev,ev]); showToast('Meetup saved 💛'); };
+  const updateEvent=ev=>{ setEvents(prev=>prev.map(e=>e.id===ev.id?ev:e)); showToast('Meetup updated 💛'); };
+  const deleteEvent=id=>{ setEvents(prev=>prev.filter(e=>e.id!==id)); showToast('Event cancelled'); };
+
+  const showToast=msg=>{ setToast(msg); setTimeout(()=>setToast(null),2500); };
+
+  const navigate=(v,person=null,cat=null)=>{
+    setView(v); setSelPerson(person); setCatFilter(cat);
+    if(v!=='add') setEditPerson(null);
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+
+  const handleSave=data=>{
+    if(editPerson){
+      setPeople(prev=>prev.map(p=>p.id===data.id?data:p));
+      showToast('Profile updated 💛');
+      navigate('profile',data);
+    } else {
+      const np={...data,id:Date.now()+Math.random(),lastContactDate:null};
+      setPeople(prev=>[...prev,np]);
+      showToast('Added to your people 💛');
+      navigate('home');
+    }
+  };
+
+  const handleDelete=id=>{ setPeople(prev=>prev.filter(p=>p.id!==id)); showToast('Removed'); navigate('home'); };
+
+  const handleLog=person=>{
+    const now=new Date().toISOString();
+    setPeople(prev=>prev.map(p=>p.id===person.id?{...p,lastContactDate:now}:p));
+    setSelPerson(prev=>prev?{...prev,lastContactDate:now}:prev);
+    showToast('Connection logged! 💛');
+  };
+
+  const handleEdit=person=>{ setEditPerson(person); navigate('add'); };
+
+  const livePerson=selPerson?(people.find(p=>p.id===selPerson.id)||selPerson):null;
+
+  const titles={home:null,profile:livePerson?.name,add:editPerson?`Edit ${editPerson.name}`:'Add Person',
+    gestures:'Thoughtful Gestures',categories:'Your Circles',cat:catFilter,analytics:'Circle Analytics'};
+
+  const goBack=()=>{
+    if(view==='add'&&editPerson) navigate('profile',editPerson);
+    else if(view==='profile')   navigate('home');
+    else if(view==='cat')       navigate('categories');
+    else                        navigate('home');
+  };
+
+  if(!ready) return null;
+
+  return (
+    <div style={{maxWidth:480,margin:'0 auto',minHeight:'100vh',background:C.bg}}>
+      {/* Header */}
+      <div style={{position:'sticky',top:0,zIndex:100,background:C.bg,padding:'14px 24px 0'}}>
+        {view!=='home'&&(
+          <button onClick={goBack}
+            style={{color:C.accent1,fontSize:14,display:'flex',alignItems:'center',gap:4,marginBottom:6}}>
+            <Back size={15} color={C.accent1}/> Back
+          </button>
+        )}
+        {titles[view]&&(
+          <h2 style={{fontSize:22,fontFamily:'Georgia,serif',color:C.primary,paddingBottom:10}}>
+            {titles[view]}
+          </h2>
+        )}
+      </div>
+
+      {/* Content */}
+      <div style={{padding:'12px 24px 0'}}>
+        {view==='home'&&<HomeView people={people} events={events} navigate={navigate} onEventClick={setSelectedEvent}/>}
+        {view==='profile'&&livePerson&&<ProfileView person={livePerson} events={events} onEdit={handleEdit} onDelete={handleDelete} onLogConnection={handleLog} onSchedule={addEvent} onEventClick={setSelectedEvent}/>}
+        {view==='add'&&<AddEditView person={editPerson} onSave={handleSave} showToast={showToast}/>}
+        {view==='gestures'&&<GesturesView showToast={showToast}/>}
+        {view==='categories'&&<CategoriesView people={people} navigate={navigate}/>}
+        {view==='cat'&&<CategoryDetailView category={catFilter} people={people} navigate={navigate}/>}
+        {view==='analytics'&&<AnalyticsView people={people}/>}
+      </div>
+
+      {/* Bottom nav */}
+      <div style={{position:'fixed',bottom:0,left:'50%',transform:'translateX(-50%)',
+        width:'100%',maxWidth:480,padding:'12px 32px',
+        display:'flex',justifyContent:'space-around',background:C.primary,
+        boxShadow:'0 -4px 20px rgba(0,0,0,.15)'}}>
+        {[
+          {id:'home',    label:'Home',      icon:<Heart size={24} color={view==='home'?'#F3C46F':'#D99C7C'} fill={view==='home'?'#F3C46F':'none'}/>},
+          {id:'categories',label:'Circles', icon:<Users size={24} color={view==='categories'?'#F3C46F':'#D99C7C'}/>},
+          {id:'gestures',label:'Gestures',  icon:<Gift  size={24} color={view==='gestures' ?'#F3C46F':'#D99C7C'}/>},
+          {id:'analytics',label:'Analytics',icon:<Trend size={24} color={view==='analytics'?'#F3C46F':'#D99C7C'}/>},
+        ].map(tab=>(
+          <button key={tab.id} onClick={()=>navigate(tab.id)}
+            style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,
+              color:view===tab.id?'#F3C46F':'#D99C7C',fontSize:11}}>
+            {tab.icon}<span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {selectedEvent&&(()=>{
+        const p=people.find(x=>x.id===selectedEvent.personId)||{name:selectedEvent.personName,photo:'👤',photoData:null};
+        return <EventDetailModal event={selectedEvent} person={p}
+          onUpdate={ev=>{updateEvent(ev);setSelectedEvent(null);}}
+          onDelete={id=>{deleteEvent(id);setSelectedEvent(null);}}
+          onClose={()=>setSelectedEvent(null)}/>;
+      })()}
+      {toast&&<Toast msg={toast}/>}
+    </div>
+  );
+}
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
