@@ -910,7 +910,26 @@ function CategoryDetailView({category,people,navigate}) {
 }
 
 // ── AnalyticsView ─────────────────────────────────────────────────────────────
-function AnalyticsView({people}) {
+function AnalyticsView({people,events}) {
+  const exportData=()=>{
+    const data=JSON.stringify({people,events},null,2);
+    const blob=new Blob([data],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download='my-people-backup.json'; a.click();
+    URL.revokeObjectURL(url);
+  };
+  const importRef=React.useRef();
+  const handleImport=async(e)=>{
+    const file=e.target.files[0]; if(!file) return;
+    try{
+      const text=await file.text();
+      const data=JSON.parse(text);
+      if(data.people) localStorage.setItem('mypeople_v1',JSON.stringify(data.people));
+      if(data.events) localStorage.setItem('mypeople_events',JSON.stringify(data.events));
+      window.location.reload();
+    }catch{ alert('Could not read backup file.'); }
+  };
   const wk =people.filter(p=>{const d=daysSince(p.lastContactDate);return d!==null&&d<=7;}).length;
   const mo =people.filter(p=>{const d=daysSince(p.lastContactDate);return d!==null&&d<=30;}).length;
   const ov =people.filter(isOverdue).length;
@@ -978,6 +997,22 @@ function AnalyticsView({people}) {
             </div>
           );
         })}
+      </div>
+
+      {/* Backup */}
+      <div style={{marginTop:14,padding:20,borderRadius:16,background:C.card}}>
+        <h3 style={{fontSize:17,fontFamily:'Georgia,serif',color:C.primary,marginBottom:6}}>Backup & Restore</h3>
+        <p style={{fontSize:13,color:C.textLight,marginBottom:14,lineHeight:1.5}}>
+          Save your people to a file, or restore from a previous backup.
+        </p>
+        <div style={{display:'flex',gap:10}}>
+          <button onClick={exportData} style={{flex:1,padding:13,borderRadius:12,
+            background:'linear-gradient(135deg,#D99C7C 0%,#F3C46F 100%)',
+            color:'white',fontSize:14}}>Export Backup</button>
+          <button onClick={()=>importRef.current.click()} style={{flex:1,padding:13,borderRadius:12,
+            background:C.light,color:C.primary,fontSize:14}}>Import Backup</button>
+        </div>
+        <input ref={importRef} type="file" accept=".json" style={{display:'none'}} onChange={handleImport}/>
       </div>
     </div>
   );
@@ -1081,7 +1116,7 @@ function App() {
         {view==='gestures'&&<GesturesView showToast={showToast}/>}
         {view==='categories'&&<CategoriesView people={people} navigate={navigate}/>}
         {view==='cat'&&<CategoryDetailView category={catFilter} people={people} navigate={navigate}/>}
-        {view==='analytics'&&<AnalyticsView people={people}/>}
+        {view==='analytics'&&<AnalyticsView people={people} events={events}/>}
       </div>
 
       {/* Bottom nav */}
