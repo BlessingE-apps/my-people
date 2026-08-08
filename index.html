@@ -621,7 +621,7 @@ function AddEditView({person,onSave,showToast}) {
   };
 
   const importFromContacts=async()=>{
-    if(!('contacts' in navigator&&'ContactsManager' in window)){
+    if(!navigator.contacts?.select){
       showToast('Only available on iPhone/Android — install as an app first');
       return;
     }
